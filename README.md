@@ -1,19 +1,49 @@
-# g1_arm_motionplanning-rrt
+# Vision-Guided Dual-Arm Manipulation on Unitree G1
 
-Vision-guided **dual-arm pick-and-place** on the Unitree G1 humanoid — AprilTag
-perception → RRT-Connect motion planning → dual-arm choreography, in pure Python
-with **no ROS at runtime**.
+A Python perception-to-execution stack for **vision-guided dual-arm pick-and-place**
+on a Unitree G1 humanoid. The system connects RealSense/AprilTag perception,
+inverse kinematics, collision-aware RRT-Connect planning, and arm/hand execution
+on an onboard **Jetson Orin NX**, with **no ROS at runtime**.
 
-The G1 uses a wrist-mounted RealSense D435i and two AprilTags (one on the box,
-one on the table) to locate a box and perform a dual-arm side-pinch:
+Developed by **Raymond Feng** in the **WashU Humanoid Robotics Lab**
+(Prof. Yiannis Kantaros).
 
-- **grab + lift** — approach → close in → grip → lift
-- **put down + push** — place the box, release, and nudge it to the robot's right
-- **pull left** — for a box jammed on the robot's right, drag it back toward the left
+## My contributions
 
-> Built in the WashU Humanoid Robotics Lab (Prof. Yiannis Kantaros). Custom
-> RRT-Connect + damped-least-squares IK stack; a ROS 2 / MoveIt 2 prototype was
-> dropped after hitting end-of-life ROS 2 Foxy constraints on the locomotion computer.
+- **Perception and grasp geometry:** integrated RealSense D435i and AprilTag
+  detection, camera-to-robot coordinate transforms, and box/table geometry to
+  generate dual-arm grasp targets from a live scene snapshot.
+- **Planning and kinematics:** implemented KD-tree-accelerated RRT-Connect,
+  capsule-vs-box collision checking, and analytical-Jacobian inverse kinematics
+  for the two 7-DOF arms.
+- **Hardware execution:** integrated 100 Hz joint-command execution with
+  Pinocchio gravity-compensation feedforward, coordinated the dex3 hands, and
+  accommodated a failed wrist-yaw actuator through a fixed-joint constraint
+  shared by IK, planning, and execution.
+
+## Selected results
+
+These are measurements from the project hardware and IK tests.
+
+| Measurement | Result |
+|---|---|
+| Analytical-Jacobian IK versus numerical-Jacobian IK | Approximately **5x faster** |
+| End-effector error with gravity compensation | Reduced from approximately **20 mm to 6.5 mm** |
+| Joint-command execution | **100 Hz** on the G1 hardware |
+
+## Implemented behaviors
+
+An onboard RealSense D435i observes two AprilTags: one on the box and one on
+the table. The stack supports:
+
+- **Grab + lift:** approach, close in, grip, and lift with both arms.
+- **Put down + push:** place and release the box, then nudge it to the robot's right.
+- **Pull-left approach:** reach toward a box on the robot's right. The drag step
+  is staged but currently disabled while post-drag hand extraction is developed.
+
+A ROS 2 / MoveIt 2 prototype preceded this custom runtime. For calibration,
+tuning, troubleshooting, and implementation details, see
+[DEVELOPMENT.md](DEVELOPMENT.md).
 
 ---
 
@@ -21,14 +51,14 @@ one on the table) to locate a box and perform a dual-arm side-pinch:
 
 ```bash
 python grab_run.py        # grab → lift → (optional) put-down + push right
-python pull_left_run.py   # pull a far-right box back toward the left
+python pull_left_run.py   # approach/reach a far-right box; drag is disabled
 ```
 
 ## How it works
 
-Two processes on the Jetson talk over a local TCP socket. `pyrealsense2` only
-builds against Python 3.8, so perception runs in a Docker container while
-planning/execution runs in the Python 3.12 conda env.
+Two processes on the Jetson talk over a local TCP socket. In this deployment,
+`pyrealsense2` is built for Python 3.8, so perception runs in a Docker container
+while planning/execution runs in a Python 3.12 conda environment.
 
 ```
 [Docker / Py3.8]  RealSense → AprilTag detect → solvePnP → T_optical_tag
@@ -88,9 +118,9 @@ python grab_run.py
 - **The right wrist-yaw motor is mechanically locked.** Its angle is read live at
   startup and pinned as a zero-width joint limit that IK/collision/planning honor.
   Pre-position it by hand before each run. Details in `DEVELOPMENT.md`.
-- **Scope:** grab, put-down + push, and pull-left are implemented. The pull-left
-  *drag* step is intentionally staged-but-disabled (post-drag hand extraction is
-  still being designed). Walking is out of scope (that's the locomotion computer).
+- **Scope:** grab and put-down + push are implemented. Pull-left currently
+  approaches and reaches in; its drag step remains staged-but-disabled while
+  post-drag hand extraction is designed. Walking is out of scope.
 - **Tuning:** every knob (tag sizes, camera extrinsic, box/table geometry, grasp
   offsets, speeds, per-phase dwell) is documented with defaults in `DEVELOPMENT.md`.
 
