@@ -8,6 +8,19 @@ on an onboard **Jetson Orin NX**, with **no ROS at runtime**.
 Developed by **Raymond Feng** in the **WashU Humanoid Robotics Lab**
 (Prof. Yiannis Kantaros).
 
+## Hardware demo
+
+<a href="https://github.com/raymond-feng26/g1_arm_motionplanning-rrt/blob/main/assets/G1_DualArm_Demo.mp4">
+  <img src="assets/g1-demo-preview.jpg" alt="Watch the Unitree G1 dual-arm hardware demonstration" width="280">
+</a>
+
+[Watch the 19.8-second demo (MP4)](assets/G1_DualArm_Demo.mp4)
+
+Original-speed footage of grasping, lifting, placing, and retracting.
+During this recording, a fault in another right-arm joint motor required a
+manual push. This was separate from the locked wrist-yaw constraint described
+below. The video preserves and labels the manual assistance.
+
 ## My contributions
 
 - **Perception and grasp geometry:** integrated RealSense D435i and AprilTag
